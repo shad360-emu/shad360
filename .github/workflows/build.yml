@@ -58,7 +58,7 @@ jobs:
         python-version: '3.11'
     
     - name: Setup Ninja
-      uses: seanmiddleditch/gha-setup-ninja@v5
+      uses: seanmiddleditch/gha-setup-ninja@v6
     
     - name: Install dependencies (Windows)
       if: runner.os == 'Windows'

@@ -1,8 +1,5 @@
 # shad360
 
-[![Build](https://github.com/shad360-emu/shad360/workflows/Build/badge.svg)](https://github.com/shad360-emu/shad360/actions)
-[![License](https://img.shields.io/badge/License-BSD--3--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
-
 shad360 is an open-source Xbox 360 emulator based on Xenia Canary with an integrated game manager. The emulator and frontend are built together into a single application.
 
 ## Features

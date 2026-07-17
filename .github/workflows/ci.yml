@@ -71,7 +71,7 @@ jobs:
 
       # Step 2: Install Python (required for scripts/tests and cppcheck integration)
       - name: Setup Python
-        uses: actions/setup-python@v5.0.0
+        uses: actions/setup-python@v6.3.0
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 

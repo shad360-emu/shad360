@@ -7,7 +7,7 @@ shad360 is an open-source Xbox 360 emulator based on Xenia Canary with an integr
 
 ## Features
 
-- Built on Xenia Canary
+- Built on Xenia Canary and Xenia Manager
 - Integrated game library
 - Vulkan and Direct3D 12 rendering
 - Save states

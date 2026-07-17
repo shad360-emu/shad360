@@ -1,0 +1,144 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Shad360.ViewModels.Controls"
+             xmlns:cards="using:Shad360.Controls.Cards"
+             xmlns:controls="using:Shad360.Controls"
+             xmlns:ic="using:FluentIcons.Avalonia.Fluent"
+             xmlns:converters="using:Shad360.Core.Converters"
+             mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="500"
+             x:Class="Shad360.Controls.ConfigEditorControl"
+             x:DataType="vm:ConfigEditorViewModel">
+
+    <UserControl.Resources>
+        <!-- ComboBox Item Template for ComboBoxOptionViewModel -->
+        <DataTemplate x:Key="ComboBoxOptionTemplate" x:DataType="vm:ComboBoxOptionViewModel">
+            <TextBlock Text="{Binding DisplayName}" />
+        </DataTemplate>
+        <converters:NotNullConverter x:Key="NotNullConverter" />
+    </UserControl.Resources>
+
+    <Grid RowDefinitions="Auto,*">
+        <!-- Search Bar -->
+        <Border Grid.Row="0"
+                Margin="16,16,16,8"
+                Padding="8"
+                CornerRadius="6"
+                BorderThickness="1"
+                BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+                Background="{DynamicResource CardBackgroundFillColorSecondaryBrush}">
+            <Grid ColumnDefinitions="Auto,*">
+                <ic:SymbolIcon Grid.Column="0"
+                               Symbol="Search"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                               Margin="8,0,8,0"
+                               VerticalAlignment="Center" />
+                <TextBox Grid.Column="1"
+                         Text="{Binding SearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                         Watermark="{DynamicResource Controls.ConfigEditorControl.Search.Watermark}"
+                         HorizontalAlignment="Stretch" />
+            </Grid>
+        </Border>
+
+        <!-- Sections List with virtualization -->
+        <ScrollViewer Grid.Row="1"
+                      HorizontalScrollBarVisibility="Disabled"
+                      VerticalScrollBarVisibility="Auto">
+            <ItemsControl ItemsSource="{Binding Sections}"
+                          Margin="16">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Margin="0,0,0,8"
+                                IsVisible="{Binding IsVisible}">
+                            <Expander IsExpanded="{Binding IsExpanded, Mode=TwoWay}">
+                                <Expander.Header>
+                                    <StackPanel Spacing="4">
+                                        <TextBlock Text="{Binding DisplayName}"
+                                                   FontSize="16"
+                                                   FontWeight="SemiBold" />
+                                        <TextBlock Text="{Binding Description}"
+                                                   FontSize="12"
+                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                   IsVisible="{Binding Description, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                                    </StackPanel>
+                                </Expander.Header>
+                                <Expander.Content>
+                                    <ItemsControl ItemsSource="{Binding Options}"
+                                                  Margin="0,8,0,0">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <StackPanel />
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border IsVisible="{Binding IsVisible}" Margin="0,0,0,8">
+                                                    <StackPanel Spacing="8">
+                                                        <!-- ToggleSwitch Card -->
+                                                        <cards:ToggleSwitchCard
+                                                                            Title="{Binding DisplayName}"
+                                                                            Tooltip="{Binding Comment}"
+                                                                            IsChecked="{Binding BoolValue, Mode=TwoWay}"
+                                                                            IsEnabled="{Binding IsEditable}"
+                                                                            IsVisible="{Binding ControlType, Converter={StaticResource ConfigControlTypeToVisibilityConverter}, ConverterParameter=ToggleSwitch}" />
+
+                                                        <!-- Slider Card -->
+                                                        <cards:SliderCard
+                                                                      Title="{Binding DisplayName}"
+                                                                      Tooltip="{Binding Comment}"
+                                                                      Minimum="{Binding Minimum, TargetNullValue=0}"
+                                                                      Maximum="{Binding Maximum, TargetNullValue=100}"
+                                                                      Value="{Binding FloatValue, Mode=TwoWay}"
+                                                                      TickFrequency="{Binding Step, TargetNullValue=1}"
+                                                                      ValueFormat="{Binding ValueFormat, TargetNullValue=F0}"
+                                                                      IsSnapToTickEnabled="{Binding Step, Converter={StaticResource NotNullConverter}}"
+                                                                      IsEnabled="{Binding IsEditable}"
+                                                                      IsVisible="{Binding ControlType, Converter={StaticResource ConfigControlTypeToVisibilityConverter}, ConverterParameter=Slider}" />
+
+                                                        <!-- NumberBox Card -->
+                                                        <cards:NumberBoxCard
+                                                                         Title="{Binding DisplayName}"
+                                                                         Tooltip="{Binding Comment}"
+                                                                         Minimum="{Binding Minimum, TargetNullValue=0}"
+                                                                         Maximum="{Binding Maximum}"
+                                                                         Value="{Binding FloatValue, Mode=TwoWay}"
+                                                                         IsEnabled="{Binding IsEditable}"
+                                                                         IsVisible="{Binding ControlType, Converter={StaticResource ConfigControlTypeToVisibilityConverter}, ConverterParameter=NumberBox}" />
+
+                                                        <!-- ComboBox Card -->
+                                                        <cards:ComboBoxCard
+                                                                        Title="{Binding DisplayName}"
+                                                                        Tooltip="{Binding Comment}"
+                                                                        ItemsSource="{Binding ComboBoxOptions}"
+                                                                        SelectedIndex="{Binding SelectedComboBoxIndex, Mode=TwoWay}"
+                                                                        ItemTemplate="{StaticResource ComboBoxOptionTemplate}"
+                                                                        IsEnabled="{Binding IsEditable}"
+                                                                        IsVisible="{Binding ControlType, Converter={StaticResource ConfigControlTypeToVisibilityConverter}, ConverterParameter=ComboBox}" />
+
+                                                        <!-- TextBox Card -->
+                                                        <cards:TextBoxCard
+                                                                       Title="{Binding DisplayName}"
+                                                                       Tooltip="{Binding Comment}"
+                                                                       Text="{Binding StringValue, Mode=TwoWay}"
+                                                                       IsEnabled="{Binding IsEditable}"
+                                                                       IsVisible="{Binding ControlType, Converter={StaticResource ConfigControlTypeToVisibilityConverter}, ConverterParameter=TextBox}" />
+                                                    </StackPanel>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </Expander.Content>
+                            </Expander>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

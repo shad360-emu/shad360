@@ -1,0 +1,449 @@
+﻿using System.Diagnostics;
+using Shad360.Core.Constants;
+using Shad360.Core.Files;
+using Shad360.Core.Logging;
+using Shad360.Core.Models;
+using Shad360.Core.Models.Files.Account;
+using Shad360.Core.Models.Game;
+using Shad360.Core.Utilities;
+
+namespace Shad360.Core.Manage;
+
+/// <summary>
+/// Handles launching the Xenia emulator with the appropriate configuration
+/// Manages the process lifecycle and configuration file operations for different Xenia versions
+/// </summary>
+public class Launcher
+{
+    public static bool XeniaUpdating = false;
+
+    /// <summary>
+    /// Launches the specified Xenia emulator version with its associated configuration
+    /// This method handles applying the appropriate configuration file before launching,
+    /// starting the emulator process, waiting for it to exit, and then saving any changes
+    /// made to the configuration during the session
+    /// </summary>
+    /// <param name="EmulatorVersion">The Xenia version to launch</param>
+    public static void LaunchEmulator(EmulatorVersion EmulatorVersion)
+    {
+        if (XeniaUpdating)
+        {
+            Logger.Error<Launcher>($"Xenia is currently updating, please wait for it to finish updating before launching the emulator");
+            throw new Exception("Xenia is updating, please wait for it to finish updating before launching the emulator");
+        }
+
+        Logger.Info<Launcher>($"Launching Xenia emulator for version: {EmulatorVersion}");
+
+        try
+        {
+            XeniaVersionInfo info = EmulatorPaths;
+            Logger.Debug<Launcher>($"Retrieved Xenia version info - Executable: {info.ExecutableLocation}, Emulator Dir: {info.EmulatorDir}, Config: {info.ConfigLocation}");
+
+            Process xenia = new Process();
+            xenia.StartInfo.FileName = AppPathResolver.GetFullPath(info.ExecutableLocation);
+            xenia.StartInfo.WorkingDirectory = AppPathResolver.GetFullPath(info.EmulatorDir);
+
+            Logger.Trace<Launcher>($"Setting up process - Executable: {xenia.StartInfo.FileName}, Working Directory: {xenia.StartInfo.WorkingDirectory}");
+
+            bool changedConfig = ConfigManager.ChangeConfigurationFile(AppPathResolver.GetFullPath(info.ConfigLocation), EmulatorVersion);
+            Logger.Info<Launcher>($"Configuration file change status: {changedConfig}");
+
+            Logger.Info<Launcher>($"Starting Xenia process for version: {EmulatorVersion}");
+            xenia.Start();
+            Logger.Info<Launcher>($"Xenia process started successfully with PID: {xenia.Id}");
+
+            Logger.Debug<Launcher>($"Waiting for Xenia process to exit...");
+            xenia.WaitForExit();
+            Logger.Info<Launcher>($"Xenia process has exited with code: {xenia.ExitCode}");
+
+            if (changedConfig)
+            {
+                Logger.Info<Launcher>($"Configuration was changed, saving updated configuration file for {EmulatorVersion}");
+                // Save a newly modified configuration file
+                ConfigManager.SaveConfigurationFile(AppPathResolver.GetFullPath(info.ConfigLocation), EmulatorVersion);
+                Logger.Info<Launcher>($"Configuration file saved successfully for {EmulatorVersion}");
+            }
+            else
+            {
+                Logger.Debug<Launcher>($"No configuration changes detected, skipping save operation for {EmulatorVersion}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Error<Launcher>($"Error occurred while launching Xenia emulator: {ex.Message}");
+            Logger.LogExceptionDetails<Launcher>(ex);
+            throw;
+        }
+
+        Logger.Info<Launcher>($"Finished launching Xenia emulator for version: {EmulatorVersion}");
+    }
+
+    /// <summary>
+    /// Launches the specified Xenia emulator version with its associated configuration asynchronously.
+    /// This method handles applying the appropriate configuration file before launching,
+    /// starting the emulator process, waiting for it to exit, and then saving any changes
+    /// made to the configuration during the session.
+    /// </summary>
+    /// <param name="EmulatorVersion">The Xenia version to launch</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    public static async Task LaunchEmulatorAsync(EmulatorVersion EmulatorVersion)
+    {
+        if (XeniaUpdating)
+        {
+            Logger.Error<Launcher>($"Xenia is currently updating, please wait for it to finish updating before launching the emulator");
+            throw new Exception("Xenia is updating, please wait for it to finish updating before launching the emulator");
+        }
+
+        Logger.Info<Launcher>($"Launching Xenia emulator for version: {EmulatorVersion}");
+
+        try
+        {
+            XeniaVersionInfo info = EmulatorPaths;
+            Logger.Debug<Launcher>($"Retrieved Xenia version info - Executable: {info.ExecutableLocation}, Emulator Dir: {info.EmulatorDir}, Config: {info.ConfigLocation}");
+
+            Process xenia = new Process();
+            xenia.StartInfo.FileName = AppPathResolver.GetFullPath(info.ExecutableLocation);
+            xenia.StartInfo.WorkingDirectory = AppPathResolver.GetFullPath(info.EmulatorDir);
+
+            Logger.Trace<Launcher>($"Setting up process - Executable: {xenia.StartInfo.FileName}, Working Directory: {xenia.StartInfo.WorkingDirectory}");
+
+            bool changedConfig = ConfigManager.ChangeConfigurationFile(AppPathResolver.GetFullPath(info.ConfigLocation), EmulatorVersion);
+            Logger.Info<Launcher>($"Configuration file change status: {changedConfig}");
+
+            Logger.Info<Launcher>($"Starting Xenia process for version: {EmulatorVersion}");
+            xenia.Start();
+            Logger.Info<Launcher>($"Xenia process started successfully with PID: {xenia.Id}");
+
+            Logger.Debug<Launcher>($"Waiting for Xenia process to exit...");
+            await xenia.WaitForExitAsync();
+            Logger.Info<Launcher>($"Xenia process has exited with code: {xenia.ExitCode}");
+
+            if (changedConfig)
+            {
+                Logger.Info<Launcher>($"Configuration was changed, saving updated configuration file for {EmulatorVersion}");
+                // Save a newly modified configuration file
+                ConfigManager.SaveConfigurationFile(AppPathResolver.GetFullPath(info.ConfigLocation), EmulatorVersion);
+                Logger.Info<Launcher>($"Configuration file saved successfully for {EmulatorVersion}");
+            }
+            else
+            {
+                Logger.Debug<Launcher>($"No configuration changes detected, skipping save operation for {EmulatorVersion}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Error<Launcher>($"Error occurred while launching Xenia emulator: {ex.Message}");
+            Logger.LogExceptionDetails<Launcher>(ex);
+            throw;
+        }
+
+        Logger.Info<Launcher>($"Finished launching Xenia emulator for version: {EmulatorVersion}");
+    }
+
+    /// <summary>
+    /// Launches a game asynchronously using the specified Xenia emulator version
+    /// This method handles the complete game launch lifecycle including
+    /// - Resolving the appropriate Xenia version configuration
+    /// - Setting up the emulator process with the game file
+    /// - Managing configuration file changes for non-custom versions
+    /// - Temporarily disabling patch files during the game session
+    /// - Waiting for the game session to complete
+    /// - Persisting any configuration changes made during the session
+    /// - Restoring disabled patch files after the game closes
+    /// </summary>
+    /// <param name="game">The game object containing file locations and Xenia version information</param>
+    /// <param name="settings">The settings object containing emulator configuration</param>
+    /// <param name="outputHandler">Optional output handler to capture Xenia output</param>
+    /// <param name="onGameLoadingStarted">Optional callback when game loading starts</param>
+    /// <param name="configOverridesFromArgs">Optional config string when game loading starts</param>
+    /// <returns>A task representing the asynchronous operation</returns>
+    public static async Task LaunchGameASync(Game game, Settings.Settings settings, XeniaOutputHandler? outputHandler = null, Action? onGameLoadingStarted = null, string? configOverridesFromArgs = null)
+    {
+        await LaunchGameCoreAsync(game, async: true, settings, outputHandler, onGameLoadingStarted, configOverridesFromArgs);
+    }
+
+    /// <summary>
+    /// Launches a game synchronously using the specified Xenia emulator version
+    /// This method handles the complete game launch lifecycle including
+    /// - Resolving the appropriate Xenia version configuration
+    /// - Setting up the emulator process with the game file
+    /// - Managing configuration file changes for non-custom versions
+    /// - Temporarily disabling patch files during the game session
+    /// - Waiting for the game session to complete
+    /// - Persisting any configuration changes made during the session
+    /// - Restoring disabled patch files after the game closes
+    /// </summary>
+    /// <param name="game">The game object containing file locations and Xenia version information</param>
+    /// <param name="settings">The settings object containing emulator configuration</param>
+    /// <param name="outputHandler">Optional output handler to capture Xenia output</param>
+    /// <param name="onGameLoadingStarted">Optional callback when game loading starts</param>
+    public static void LaunchGame(Game game, Settings.Settings settings, XeniaOutputHandler? outputHandler = null, Action? onGameLoadingStarted = null)
+    {
+        LaunchGameCoreAsync(game, async: false, settings, outputHandler, onGameLoadingStarted).GetAwaiter().GetResult();
+    }
+
+    /// <summary>
+    /// Core implementation for launching a game
+    /// </summary>
+    /// <param name="game">The game object containing file locations and Xenia version information</param>
+    /// <param name="async">Whether to use async operations</param>
+    /// <param name="settings">The settings object containing emulator configuration</param>
+    /// <param name="outputHandler">Optional output handler to capture Xenia output</param>
+    /// <param name="onGameLoadingStarted">Optional callback when game loading starts</param>
+    /// <param name="configOverridesFromArgs">Optional config string when game loading starts</param>
+    /// <returns>A task representing the asynchronous operation</returns>
+    private static async Task LaunchGameCoreAsync(Game game, bool async, Settings.Settings settings, XeniaOutputHandler? outputHandler = null, Action? onGameLoadingStarted = null, string? configOverridesFromArgs = null)
+    {
+        if (XeniaUpdating)
+        {
+            Logger.Error<Launcher>($"Xenia is currently updating, please wait for it to finish updating before launching the emulator");
+            throw new Exception("Xenia is updating, please wait for it to finish updating before launching the emulator");
+        }
+
+        if (!game.FileLocations.IsGamePathValid)
+        {
+            Logger.Error<Launcher>($"Invalid game path: {game.FileLocations.Game}");
+            throw new Exception($"Invalid game path: {game.FileLocations.Game}");
+        }
+
+        Logger.Info<Launcher>($"Launching game: {game.Title} using Xenia version: {game.EmulatorVersion}");
+
+        // Load settings to check automatic save backup configuration
+        bool automaticSaveBackup = settings.Settings.Emulator.Settings.Profile.AutomaticSaveBackup;
+        string profileXuid = settings.Settings.Emulator.Settings.Profile.ProfileXuid;
+
+        Logger.Debug<Launcher>($"AutomaticSaveBackup: {automaticSaveBackup}, ProfileXuid: {profileXuid}");
+
+        // Initialize the output handler if automatic save backup is enabled or if we need to track game loading
+        XeniaOutputHandler? xeniaOutputHandler = null;
+        if (automaticSaveBackup && !string.IsNullOrEmpty(profileXuid) && profileXuid != "0")
+        {
+            xeniaOutputHandler = new XeniaOutputHandler(game);
+            Logger.Info<Launcher>($"Initialized XeniaOutputHandler");
+        }
+        else if (onGameLoadingStarted != null)
+        {
+            // Initialize output handler to detect when game loading starts
+            xeniaOutputHandler = new XeniaOutputHandler(game);
+            Logger.Info<Launcher>($"Initialized XeniaOutputHandler");
+        }
+
+        Process xenia = new Process();
+        bool changedConfig = false;
+        if (game.EmulatorVersion != )
+        {
+            XeniaVersionInfo xeniaVersionInfo = EmulatorPaths;
+            Logger.Debug<Launcher>($"Retrieved Xenia version info - Executable: {xeniaVersionInfo.ExecutableLocation}, Emulator Dir: {xeniaVersionInfo.EmulatorDir}, Config: {xeniaVersionInfo.ConfigLocation}");
+
+            // Configure the Xenia emulator process with the executable path and working directory
+            xenia.StartInfo.FileName = AppPathResolver.GetFullPath(xeniaVersionInfo.ExecutableLocation);
+            xenia.StartInfo.WorkingDirectory = AppPathResolver.GetFullPath(xeniaVersionInfo.EmulatorDir);
+        }
+        else
+        {
+            xenia.StartInfo.FileName = game.FileLocations.CustomEmulatorExecutable;
+            xenia.StartInfo.WorkingDirectory = Path.GetDirectoryName(game.FileLocations.CustomEmulatorExecutable);
+        }
+
+        if (configOverridesFromArgs == null || configOverridesFromArgs.Length == 0)
+        {
+            // Set the game file path as a command-line argument
+            xenia.StartInfo.Arguments = $@"""{game.FileLocations.Game}""";
+        }
+        else
+        {
+            // Set the game file path as a command-line argument
+            xenia.StartInfo.Arguments = $@"""{game.FileLocations.Game}"" {configOverridesFromArgs}";
+        }
+
+        Logger.Trace<Launcher>($"Process configuration - Executable: {xenia.StartInfo.FileName}, Working Directory: {xenia.StartInfo.WorkingDirectory}, Arguments: {xenia.StartInfo.Arguments}");
+
+        try
+        {
+            // For non-custom Xenia versions, apply the appropriate configuration file before launch
+            if (game.EmulatorVersion != )
+            {
+                Logger.Debug<Launcher>($"Non-custom Xenia version detected, applying configuration file for {game.EmulatorVersion}");
+                changedConfig = ConfigManager.ChangeConfigurationFile(AppPathResolver.GetFullPath(game.FileLocations.Config!), game.EmulatorVersion);
+                Logger.Info<Launcher>($"Configuration file change status: {changedConfig}");
+
+                // Disable patch files that match the game's ID or alternative IDs
+                Logger.Debug<Launcher>($"Disabling patch files for game: {game.Title}");
+                if (async)
+                {
+                    await PatchManager.DisablePatchesAsync(game, game.EmulatorVersion);
+                }
+                else
+                {
+                    PatchManager.DisablePatches(game, game.EmulatorVersion);
+                }
+            }
+            else
+            {
+                Logger.Debug<Launcher>($"Custom Xenia version detected, skipping configuration file change");
+            }
+
+            // Configure the process to capture output (prioritize save backup handler, then fallback to provided handler)
+            (xeniaOutputHandler ?? outputHandler)?.ConfigureProcess(xenia);
+
+            // Subscribe to the GameLoadingStarted event to trigger the callback
+            if (onGameLoadingStarted != null && (xeniaOutputHandler ?? outputHandler) != null)
+            {
+                Logger.Info<Launcher>($"Subscribing to GameLoadingStarted event for {game.Title}");
+                EventHandler? onGameLoadingStartedHandler = null;
+                onGameLoadingStartedHandler = (sender, args) =>
+                {
+                    Logger.Info<Launcher>($"GameLoadingStarted event fired for {game.Title}, invoking callback");
+                    try
+                    {
+                        onGameLoadingStarted();
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Error<Launcher>($"Error invoking GameLoadingStarted callback: {ex.Message}");
+                    }
+                    (xeniaOutputHandler ?? outputHandler)!.GameLoadingStarted -= onGameLoadingStartedHandler;
+                };
+                (xeniaOutputHandler ?? outputHandler)!.GameLoadingStarted += onGameLoadingStartedHandler;
+            }
+            else
+            {
+                Logger.Warning<Launcher>($"Not subscribing to GameLoadingStarted event: onGameLoadingStarted={onGameLoadingStarted != null}, outputHandler={(xeniaOutputHandler ?? outputHandler) != null}");
+            }
+
+            Logger.Info<Launcher>($"Starting Xenia process for game: {game.Title}");
+            DateTime launchTime = DateTime.Now;
+
+            // Start Xenia
+            xenia.Start();
+
+            // Start capturing output (prioritize save backup handler, then fallback to provided handler)
+            (xeniaOutputHandler ?? outputHandler)?.StartCapture(xenia);
+
+            Logger.Info<Launcher>($"Xenia process started successfully with PID: {xenia.Id}");
+
+            Logger.Debug<Launcher>($"Waiting for Xenia process to exit...");
+            if (async)
+            {
+                await xenia.WaitForExitAsync();
+            }
+            else
+            {
+                xenia.WaitForExit();
+            }
+
+            Logger.Info<Launcher>($"Xenia process has exited with code: {xenia.ExitCode}");
+
+            game.Playtime += (DateTime.Now - launchTime).TotalMinutes;
+
+            if (game.EmulatorVersion != )
+            {
+                // Automatic save backup after the game is done running
+                if (automaticSaveBackup && xeniaOutputHandler != null && !string.IsNullOrEmpty(profileXuid) && profileXuid != "0")
+                {
+                    // Check if the selected profile was actually loaded during the session
+                    IReadOnlyList<AccountInfo> loadedProfiles = xeniaOutputHandler.LoadedProfiles;
+                    bool profileWasLoaded = loadedProfiles.Any(p => p.Xuid.ToString() == profileXuid);
+
+                    if (profileWasLoaded)
+                    {
+                        Logger.Info<Launcher>($"Starting automatic save backup for {game.Title} (Profile XUID: {profileXuid})");
+                        await PerformAutomaticSaveBackup(game, profileXuid);
+                    }
+                    else
+                    {
+                        Logger.Warning<Launcher>($"Selected profile XUID {profileXuid} was not loaded during the session. Skipping automatic save backup.");
+                    }
+                }
+
+                // Save configuration changes if the configuration was modified during the session and not launched with config overrides
+                if (changedConfig && (configOverridesFromArgs == null || configOverridesFromArgs.Length == 0))
+                {
+                    Logger.Info<Launcher>($"Configuration was changed, saving updated configuration file for {game.EmulatorVersion}");
+                    ConfigManager.SaveConfigurationFile(AppPathResolver.GetFullPath(game.FileLocations.Config!), game.EmulatorVersion);
+                    Logger.Info<Launcher>($"Configuration file saved successfully for {game.EmulatorVersion}");
+                }
+                else
+                {
+                    Logger.Debug<Launcher>($"No configuration changes detected, skipping save operation for {game.EmulatorVersion}");
+                }
+            }
+
+            GameManager.SaveLibrary();
+        }
+        finally
+        {
+            if (game.EmulatorVersion != )
+            {
+                // Restore patch files, even if an exception occurred
+                Logger.Debug<Launcher>($"Restoring disabled patch files for game: {game.Title}");
+                if (async)
+                {
+                    await PatchManager.RestorePatchesAsync();
+                }
+                else
+                {
+                    PatchManager.RestorePatches();
+                }
+            }
+            // Stop capturing output (prioritize save backup handler, then fallback to the provided handler)
+            (xeniaOutputHandler ?? outputHandler)?.StopCapture(xenia);
+        }
+
+        Logger.Info<Launcher>($"Finished launching game: {game.Title}");
+    }
+
+    /// <summary>
+    /// Performs automatic save backup for the specified game and profile
+    /// </summary>
+    /// <param name="game">The game to back up saves for</param>
+    /// <param name="profileXuid">The XUID of the profile to back up saves for</param>
+    private static async Task PerformAutomaticSaveBackup(Game game, string profileXuid)
+    {
+        try
+        {
+            Logger.Info<Launcher>($"Performing automatic save backup for game: {game.Title}, Profile XUID: {profileXuid}");
+
+            // Get save files for the specific profile
+            IEnumerable<HeaderFile> saveFiles = SaveManager.GetSaveFiles(game, profileXuid);
+            List<HeaderFile> saveFileList = saveFiles.ToList();
+
+            if (saveFileList.Count == 0)
+            {
+                Logger.Info<Launcher>($"No save files found for game {game.Title} and profile {profileXuid}");
+                return;
+            }
+
+            Logger.Info<Launcher>($"Found {saveFileList.Count} save files to backup");
+
+            // Create the backup directory path: Backup/{GameTitle}/Game Saves/{XUID}/
+            string backupBaseDir = Path.Combine(AppPaths.Backup, game.Title, "Game Saves", $"{profileXuid}");
+            string timeStamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+
+            Directory.CreateDirectory(backupBaseDir);
+            Logger.Debug<Launcher>($"Created backup directory: {backupBaseDir}");
+
+            // Export saves to the backup directory
+            string zipPath = Path.Combine(backupBaseDir, $"{game.Title}_{timeStamp}.xsave");
+
+            Logger.Info<Launcher>($"Exporting save files to {zipPath}");
+            bool exportSuccess = await SaveManager.ExportSave(saveFileList, zipPath);
+
+            if (exportSuccess)
+            {
+                Logger.Info<Launcher>($"Successfully exported {saveFileList.Count} save files to {zipPath}");
+            }
+            else
+            {
+                Logger.Error<Launcher>($"Failed to export save files to {zipPath}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Error<Launcher>($"Failed to perform automatic save backup for {game.Title}");
+            Logger.LogExceptionDetails<Launcher>(ex);
+        }
+    }
+}
+
+

@@ -1,0 +1,27 @@
+﻿using System.Text.Json.Serialization;
+
+namespace Shad360.Core.Settings.Sections;
+
+/// <summary>
+/// Subsection for general settings
+/// </summary>
+public class GeneralSettings
+{
+    /// <summary>
+    /// Whether this is the first startup of the application
+    /// </summary>
+    [JsonPropertyName("first_startup")]
+    public bool FirstStartup { get; set; } = true;
+
+    /// <summary>
+    /// Whether to parse game details with Xenia emulator
+    /// </summary>
+    [JsonPropertyName("parse_game_details_with_xenia")]
+    public bool ParseGameDetailsWithXenia { get; set; } = false;
+
+    /// <summary>
+    /// Whether to use MediaId from game files to find a matching media entry title
+    /// </summary>
+    [JsonPropertyName("use_media_id_for_title")]
+    public bool UseMediaIdForTitle { get; set; } = true;
+}

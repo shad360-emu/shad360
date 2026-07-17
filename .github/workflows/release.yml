@@ -1,0 +1,228 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to release (e.g., v1.0.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  build-and-release:
+    name: Build and Release
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Setup Ninja
+        uses: seanmiddleditch/gha-setup-ninja@v5
+
+      - name: Install CMake
+        uses: lukka/get-cmake@latest
+        with:
+          cmake-version: '3.28.3'
+
+      - name: Install Vulkan SDK
+        uses: humbletim/install-vulkan-sdk@v1.0.0
+        with:
+          version: '1.3.283.0'
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      - name: Cache CMake build
+        uses: actions/cache@v4
+        with:
+          path: build/native
+          key: ${{ runner.os }}-cmake-${{ hashFiles('src/backend/CMakeLists.txt', 'src/backend/**/*.cc', 'src/backend/**/*.h') }}
+          restore-keys: |
+            ${{ runner.os }}-cmake-
+
+      - name: Configure CMake (Windows x64)
+        run: |
+          cmake -S src/backend -B build/native/Release \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DSHAD360_BUILD_SHARED=ON \
+            -DSHAD360_ENABLE_VULKAN=ON \
+            -DSHAD360_ENABLE_D3D12=ON \
+            -DSHAD360_ENABLE_AUDIO=ON \
+            -DSHAD360_ENABLE_DISCORD=OFF \
+            -G Ninja
+
+      - name: Build Native Library (Windows x64)
+        run: cmake --build build/native/Release --config Release --parallel
+
+      - name: Copy Native Library (Windows x64)
+        run: |
+          mkdir -p src/frontend/Shad360.UI/bin/Release/net10.0/runtimes/win-x64/native
+          cp build/native/Release/bin/Windows/shad360.dll src/frontend/Shad360.UI/bin/Release/net10.0/runtimes/win-x64/native/
+
+      - name: Restore Frontend
+        run: dotnet restore src/frontend/Shad360.sln
+
+      - name: Build Frontend
+        run: dotnet build src/frontend/Shad360.sln --configuration Release --no-restore
+
+      - name: Publish Frontend (Windows x64)
+        run: dotnet publish src/frontend/Shad360.UI/Shad360.UI.csproj -c Release -r win-x64 --self-contained true -o artifacts/shad360-win-x64
+
+      - name: Publish Frontend (Linux x64)
+        run: dotnet publish src/frontend/Shad360.UI/Shad360.UI.csproj -c Release -r linux-x64 --self-contained true -o artifacts/shad360-linux-x64
+
+      - name: Publish Frontend (macOS x64)
+        run: dotnet publish src/frontend/Shad360.UI/Shad360.UI.csproj -c Release -r osx-x64 --self-contained true -o artifacts/shad360-macos-x64
+
+      - name: Publish Frontend (macOS ARM64)
+        run: dotnet publish src/frontend/Shad360.UI/Shad360.UI.csproj -c Release -r osx-arm64 --self-contained true -o artifacts/shad360-macos-arm64
+
+      # Build native libraries for Linux/macOS using Docker
+      - name: Build Native for Linux
+        uses: docker://ubuntu:22.04
+        with:
+          args: >
+            bash -c "
+              apt-get update && apt-get install -y cmake ninja-build python3 python3-pip git build-essential libvulkan-dev libx11-dev libxcb1-dev libxcb-randr0-dev libxcb-xinerama0-dev libxcursor-dev libxi-dev libxxf86vm-dev libxrandr-dev libasound2-dev libpulse-dev libjack-jackd2-dev libdbus-1-dev libudev-dev libwayland-dev nasm
+              pip3 install meson
+              cmake -S /github/workspace/src/backend -B /github/workspace/build/native-linux/Release -DCMAKE_BUILD_TYPE=Release -DSHAD360_BUILD_SHARED=ON -DSHAD360_ENABLE_VULKAN=ON -DSHAD360_ENABLE_D3D12=OFF -DSHAD360_ENABLE_AUDIO=ON -DSHAD360_ENABLE_DISCORD=OFF -G Ninja
+              cmake --build /github/workspace/build/native-linux/Release --config Release --parallel
+            "
+
+      - name: Copy Native Library (Linux x64)
+        run: |
+          mkdir -p artifacts/shad360-linux-x64/runtimes/linux-x64/native
+          cp build/native-linux/Release/bin/Linux/libshad360.so artifacts/shad360-linux-x64/runtimes/linux-x64/native/
+
+      - name: Build Native for macOS
+        uses: docker://ghcr.io/actions/macos-runner:latest
+        with:
+          args: >
+            bash -c "
+              brew install cmake ninja python3 nasm molten-vk vulkan-headers vulkan-loader
+              cmake -S /github/workspace/src/backend -B /github/workspace/build/native-macos/Release -DCMAKE_BUILD_TYPE=Release -DSHAD360_BUILD_SHARED=ON -DSHAD360_ENABLE_VULKAN=ON -DSHAD360_ENABLE_D3D12=OFF -DSHAD360_ENABLE_AUDIO=ON -DSHAD360_ENABLE_DISCORD=OFF -G Ninja -DCMAKE_OSX_ARCHITECTURES=x86_64
+              cmake --build /github/workspace/build/native-macos/Release --config Release --parallel
+            "
+
+      - name: Copy Native Library (macOS x64)
+        run: |
+          mkdir -p artifacts/shad360-macos-x64/runtimes/osx-x64/native
+          cp build/native-macos/Release/bin/macOS/libshad360.dylib artifacts/shad360-macos-x64/runtimes/osx-x64/native/
+
+      - name: Build Native for macOS ARM64
+        uses: docker://ghcr.io/actions/macos-runner:latest
+        with:
+          args: >
+            bash -c "
+              brew install cmake ninja python3 nasm molten-vk vulkan-headers vulkan-loader
+              cmake -S /github/workspace/src/backend -B /github/workspace/build/native-macos-arm64/Release -DCMAKE_BUILD_TYPE=Release -DSHAD360_BUILD_SHARED=ON -DSHAD360_ENABLE_VULKAN=ON -DSHAD360_ENABLE_D3D12=OFF -DSHAD360_ENABLE_AUDIO=ON -DSHAD360_ENABLE_DISCORD=OFF -G Ninja -DCMAKE_OSX_ARCHITECTURES=arm64
+              cmake --build /github/workspace/build/native-macos-arm64/Release --config Release --parallel
+            "
+
+      - name: Copy Native Library (macOS ARM64)
+        run: |
+          mkdir -p artifacts/shad360-macos-arm64/runtimes/osx-arm64/native
+          cp build/native-macos-arm64/Release/bin/macOS/libshad360.dylib artifacts/shad360-macos-arm64/runtimes/osx-arm64/native/
+
+      - name: Create Distribution Packages
+        run: |
+          Compress-Archive -Path artifacts/shad360-win-x64 -DestinationPath artifacts/shad360-${{ github.ref_name }}-win-x64.zip -Force
+          tar -czf artifacts/shad360-${{ github.ref_name }}-linux-x64.tar.gz -C artifacts shad360-linux-x64
+          tar -czf artifacts/shad360-${{ github.ref_name }}-macos-x64.tar.gz -C artifacts shad360-macos-x64
+          tar -czf artifacts/shad360-${{ github.ref_name }}-macos-arm64.tar.gz -C artifacts shad360-macos-arm64
+
+      - name: Generate Release Notes
+        id: release_notes
+        run: |
+          $tag = "${{ github.ref_name }}"
+          $prevTag = git describe --tags --abbrev=0 $tag^ 2>$null || echo ""
+          if ($prevTag) {
+            $notes = git log $prevTag..$tag --pretty=format:"- %s (%an)"
+          } else {
+            $notes = git log $tag --pretty=format:"- %s (%an)"
+          }
+          echo "NOTES<<EOF" >> $env:GITHUB_OUTPUT
+          echo "$notes" >> $env:GITHUB_OUTPUT
+          echo "EOF" >> $env:GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: shad360 ${{ github.ref_name }}
+          body: |
+            ## shad360 ${{ github.ref_name }}
+            
+            ### Changes
+            ${{ steps.release_notes.outputs.NOTES }}
+            
+            ### Downloads
+            - **Windows x64**: `shad360-${{ github.ref_name }}-win-x64.zip`
+            - **Linux x64**: `shad360-${{ github.ref_name }}-linux-x64.tar.gz`
+            - **macOS x64**: `shad360-${{ github.ref_name }}-macos-x64.tar.gz`
+            - **macOS ARM64**: `shad360-${{ github.ref_name }}-macos-arm64.tar.gz`
+            
+            ### Installation
+            1. Download the package for your platform
+            2. Extract the archive
+            3. Run `shad360.exe` (Windows) or `./shad360` (Linux/macOS)
+            
+            The emulator backend is embedded - no separate Xenia installation needed!
+          files: |
+            artifacts/shad360-${{ github.ref_name }}-win-x64.zip
+            artifacts/shad360-${{ github.ref_name }}-linux-x64.tar.gz
+            artifacts/shad360-${{ github.ref_name }}-macos-x64.tar.gz
+            artifacts/shad360-${{ github.ref_name }}-macos-arm64.tar.gz
+          draft: false
+          prerelease: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Separate job for security scanning
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+      
+      - name: Upload Trivy results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: 'trivy-results.sarif'

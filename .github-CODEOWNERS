@@ -1,0 +1,32 @@
+# CODEOWNERS for shad360
+# These users/teams will be automatically requested for review when changes are made to these files
+
+# Global owners
+* Aarvsn 
+
+# Native backend (C++/CMake)
+/src/backend/ @shad360-emu/backend-team
+/src/backend/src/xenia/ @shad360-emu/backend-team
+/src/backend/CMakeLists.txt @shad360-emu/backend-team
+/src/backend/cmake/ @shad360-emu/backend-team
+
+# Frontend (C#/Avalonia)
+/src/frontend/ @shad360-emu/frontend-team
+/src/frontend/Shad360.Core/ @shad360-emu/frontend-team
+/src/frontend/Shad360.UI/ @shad360-emu/frontend-team
+
+# Build system
+/build.ps1 @shad360-emu/build-team
+/build.sh @shad360-emu/build-team
+/CMakeLists.txt @shad360-emu/build-team
+/.github/workflows/ @shad360-emu/build-team
+
+# Documentation
+/README.md @shad360-emu/docs-team
+/CONTRIBUTING.md @shad360-emu/docs-team
+/docs/ @shad360-emu/docs-team
+
+# Configuration
+/.github/ @shad360-emu/maintainers
+/.gitignore @shad360-emu/maintainers
+/LICENSE @shad360-emu/maintainers

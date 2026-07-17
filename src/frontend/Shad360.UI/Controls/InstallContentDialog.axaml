@@ -1,0 +1,166 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Shad360.ViewModels.Controls"
+             xmlns:fluent="using:FluentIcons.Avalonia.Fluent"
+             xmlns:cards="using:Shad360.Controls.Cards"
+             mc:Ignorable="d" d:DesignWidth="600" d:DesignHeight="500"
+             x:Class="Shad360.Controls.InstallContentDialog"
+             x:DataType="vm:InstallContentDialogViewModel"
+             Width="600">
+    <!-- Content List Section -->
+    <cards:CustomCard>
+        <Grid RowDefinitions="*,Auto">
+            <!-- Content Items ListBox -->
+            <ListBox Grid.Row="0"
+                     Background="Transparent"
+                     BorderThickness="0"
+                     SelectionMode="Single"
+                     ItemsSource="{Binding ContentItems}"
+                     SelectedItem="{Binding SelectedContent, Mode=TwoWay}">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <!-- Individual content item card -->
+                        <cards:CustomCard>
+                            <Grid ColumnDefinitions="Auto,*,Auto">
+                                <!-- Thumbnail image with Xbox controller fallback -->
+                                <Border Grid.Column="0"
+                                        Width="48"
+                                        Height="48"
+                                        CornerRadius="4"
+                                        Margin="0,0,12,0"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        Background="{DynamicResource ControlFillColorDefaultBrush}">
+                                    <Panel>
+                                        <!-- Thumbnail image -->
+                                        <Image Source="{Binding ThumbnailImage}"
+                                               Stretch="UniformToFill">
+                                            <Image.IsVisible>
+                                                <Binding Path="ThumbnailImage" Converter="{x:Static ObjectConverters.IsNotNull}" />
+                                            </Image.IsVisible>
+                                        </Image>
+                                        <!-- Title Thumbnail image (shown if ThumbnailImage is null) -->
+                                        <Image Source="{Binding TitleThumbnailImage}"
+                                               Stretch="UniformToFill">
+                                            <Image.IsVisible>
+                                                <MultiBinding Converter="{x:Static BoolConverters.And}">
+                                                    <Binding Path="TitleThumbnailImage" Converter="{x:Static ObjectConverters.IsNotNull}" />
+                                                    <Binding Path="ThumbnailImage" Converter="{x:Static ObjectConverters.IsNull}" />
+                                                </MultiBinding>
+                                            </Image.IsVisible>
+                                        </Image>
+                                        <!-- Fallback Xbox controller icon -->
+                                        <fluent:SymbolIcon Symbol="XboxController"
+                                                           HorizontalAlignment="Center"
+                                                           VerticalAlignment="Center">
+                                            <fluent:SymbolIcon.Foreground>
+                                                <DynamicResource ResourceKey="TextFillColorSecondaryBrush" />
+                                            </fluent:SymbolIcon.Foreground>
+                                            <fluent:SymbolIcon.IsVisible>
+                                                <MultiBinding Converter="{x:Static BoolConverters.And}">
+                                                    <Binding Path="ThumbnailImage" Converter="{x:Static ObjectConverters.IsNull}" />
+                                                    <Binding Path="TitleThumbnailImage" Converter="{x:Static ObjectConverters.IsNull}" />
+                                                </MultiBinding>
+                                            </fluent:SymbolIcon.IsVisible>
+                                        </fluent:SymbolIcon>
+                                    </Panel>
+                                </Border>
+
+                                <!-- Content name, type, and progress -->
+                                <StackPanel Grid.Column="1"
+                                            VerticalAlignment="Stretch"
+                                            Spacing="4">
+                                    <!-- Display Name / Title Name (on top) -->
+                                    <TextBlock Text="{Binding DisplayName}"
+                                               FontWeight="SemiBold"
+                                               TextWrapping="Wrap"
+                                               TextTrimming="CharacterEllipsis">
+                                        <TextBlock.IsVisible>
+                                            <Binding Path="DisplayName"
+                                                     Converter="{x:Static StringConverters.IsNotNullOrEmpty}" />
+                                        </TextBlock.IsVisible>
+                                    </TextBlock>
+                                    <!-- Content Type (below) -->
+                                    <TextBlock Text="{Binding ContentType}"
+                                               FontSize="11"
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}">
+                                    </TextBlock>
+                                    <!-- Progress bar (shown during installation) -->
+                                    <ProgressBar Value="{Binding InstallationProgress}"
+                                                 Minimum="0"
+                                                 Maximum="100"
+                                                 IsVisible="{Binding IsInstalling}">
+                                    </ProgressBar>
+                                    <!-- Status indicators -->
+                                    <StackPanel Spacing="4"
+                                                IsVisible="{Binding InstallationComplete}">
+                                        <TextBlock Text="{DynamicResource InstallContentDialog.Progress.Complete}"
+                                                   FontSize="11"
+                                                   Foreground="{DynamicResource SystemAccentColor}"
+                                                   IsVisible="{Binding InstallationComplete}">
+                                        </TextBlock>
+                                    </StackPanel>
+                                    <StackPanel Spacing="4"
+                                                IsVisible="{Binding InstallationFailed}">
+                                        <TextBlock Text="{DynamicResource InstallContentDialog.Progress.Failed}"
+                                                   FontSize="11"
+                                                   Foreground="{DynamicResource SystemErrorTextColorBrush}">
+                                            <TextBlock.IsVisible>
+                                                <Binding Path="InstallationFailed" />
+                                            </TextBlock.IsVisible>
+                                        </TextBlock>
+                                        <TextBlock Text="{Binding InstallationErrorMessage}"
+                                                   FontSize="10"
+                                                   TextWrapping="Wrap"
+                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                   IsVisible="{Binding InstallationFailed}">
+                                        </TextBlock>
+                                    </StackPanel>
+                                </StackPanel>
+
+                                <!-- Remove button (hidden during installation) -->
+                                <Button Grid.Column="2"
+                                        Command="{Binding RemoveCommand}"
+                                        ToolTip.Tip="{DynamicResource InstallContentDialog.ContentItem.RemoveToolTip}"
+                                        HorizontalAlignment="Right">
+                                    <Button.IsVisible>
+                                        <Binding Path="IsInstalling" Converter="{x:Static BoolConverters.Not}" />
+                                    </Button.IsVisible>
+                                    <Button.Content>
+                                        <fluent:SymbolIcon Symbol="Delete" />
+                                    </Button.Content>
+                                </Button>
+                                <!-- Status icon during installation -->
+                                <fluent:SymbolIcon Grid.Column="2"
+                                                   Symbol="ArrowUpload"
+                                                   HorizontalAlignment="Right"
+                                                   Foreground="{DynamicResource SystemAccentColor}"
+                                                   IsVisible="{Binding IsInstalling}">
+                                </fluent:SymbolIcon>
+                            </Grid>
+                            <!-- Tooltip showing the file path -->
+                            <ToolTip.Tip>
+                                <TextBlock Text="{Binding FilePath}" />
+                            </ToolTip.Tip>
+                        </cards:CustomCard>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+
+            <!-- Add Content Button -->
+            <Button Grid.Row="1"
+                    x:Name="AddContentButton"
+                    HorizontalAlignment="Right"
+                    Margin="8">
+                <ToolTip.Tip>
+                    <TextBlock Text="{DynamicResource InstallContentDialog.AddContent.Button}" />
+                </ToolTip.Tip>
+                <Button.Content>
+                    <fluent:SymbolIcon Symbol="Add" />
+                </Button.Content>
+            </Button>
+        </Grid>
+    </cards:CustomCard>
+</UserControl>

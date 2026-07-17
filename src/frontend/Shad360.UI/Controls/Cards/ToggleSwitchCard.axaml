@@ -1,0 +1,25 @@
+﻿<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:Shad360.Controls.Cards">
+    <Style Selector="local|ToggleSwitchCard">
+        <Setter Property="Template">
+            <ControlTemplate TargetType="local:ToggleSwitchCard">
+                <local:CustomCard Tooltip="{TemplateBinding Tooltip}">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <!-- Header -->
+                        <local:CardHeader Grid.Column="0"
+                                          Title="{TemplateBinding Title}"
+                                          Description="{TemplateBinding Description}"
+                                          Icon="{TemplateBinding Icon}"
+                                          ShowIconBackground="{TemplateBinding ShowIconBackground}" />
+                        <!-- ToggleSwitch -->
+                        <ToggleSwitch Grid.Column="1"
+                                      VerticalAlignment="Center"
+                                      IsChecked="{Binding IsChecked,RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"
+                                      Command="{TemplateBinding Command}" />
+                    </Grid>
+                </local:CustomCard>
+            </ControlTemplate>
+        </Setter>
+    </Style>
+</Styles>

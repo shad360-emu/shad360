@@ -1,0 +1,228 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using Avalonia.Interactivity;
+using FluentAvalonia.UI.Controls;
+using FluentAvalonia.UI.Windowing;
+using Microsoft.Extensions.DependencyInjection;
+using Shad360.Controls;
+using Shad360.Core.Installation;
+using Shad360.Core.Logging;
+using Shad360.Core.Models;
+using Shad360.Core.Services;
+using Shad360.Core.Settings;
+using Shad360.Core.Settings.Sections;
+using Shad360.Services;
+using Shad360.Core.Utilities;
+using Shad360.ViewModels;
+
+namespace Shad360.Views;
+
+public partial class MainWindow : AppWindow
+{
+    // Properties
+    private MainWindowViewModel _viewModel { get; set; }
+    private IReleaseService _releaseService { get; set; }
+    private INotificationService _notificationService { get; set; }
+    private Settings _settings { get; set; }
+
+    // Constructor
+    public MainWindow()
+    {
+        InitializeComponent();
+        _viewModel = App.Services.GetRequiredService<MainWindowViewModel>();
+        _releaseService = App.Services.GetRequiredService<IReleaseService>();
+        _notificationService = App.Services.GetRequiredService<INotificationService>();
+        _settings = App.Services.GetRequiredService<Settings>();
+        DataContext = _viewModel;
+
+        // Subscribe to EventManager for window state changes
+        EventManager.Instance.WindowDisabled += OnWindowDisabled;
+    }
+
+    private async void Control_OnLoaded(object? sender, RoutedEventArgs e)
+    {
+        try
+        {
+            if (_settings.Settings.General.FirstStartup)
+            {
+                await ShowWelcomeDialog();
+            }
+
+            if (_settings.Settings.UpdateChecks.CheckForUpdatesOnStartup)
+            {
+                await CheckForEmulatorUpdates();
+                await CheckForManagerUpdates();
+            }
+        }
+        catch
+        {
+            // ignored
+        }
+    }
+
+    /// <summary>
+    /// Checks for emulator updates and notifies the user if updates are available.
+    /// </summary>
+    private async Task CheckForEmulatorUpdates()
+    {
+        Logger.Debug<MainWindow>("Checking for emulator updates");
+
+        List<EmulatorVersion> updatesAvailable = [];
+        Dictionary<EmulatorVersion, EmulatorInfo?> emulators = new Dictionary<EmulatorVersion, EmulatorInfo?>
+        {
+            { , _viewModel.Settings.Settings.Emulator.Canary },
+            { , _viewModel.Settings.Settings.Emulator.Mousehook },
+            { , _viewModel.Settings.Settings.Emulator.Netplay }
+        };
+
+        Core.Manage.Launcher.XeniaUpdating = true;
+
+        foreach ((EmulatorVersion version, EmulatorInfo? emulator) in emulators)
+        {
+            try
+            {
+                if (emulator == null)
+                {
+                    Logger.Debug<MainWindow>($"Xenia {version} emulator info is null, skipping update check");
+                    continue;
+                }
+
+                ReleaseType releaseType = version switch
+                {
+                     => ReleaseType.XeniaCanary,
+                     => ReleaseType.MousehookStandard,
+                     => emulator.UseNightlyBuild ? ReleaseType.NetplayNightly : ReleaseType.NetplayStable,
+                    _ => throw new Exception($"Unknown Xenia version: {version}")
+                };
+
+                bool needsUpdate = false;
+
+                if (emulator.UpdateAvailable)
+                {
+                    Logger.Debug<MainWindow>($"Xenia {version} update already flagged as available");
+                    needsUpdate = true;
+                }
+                else if ((DateTime.Now - emulator.LastUpdateCheckDate).TotalDays >= 1)
+                {
+                    Logger.Info<MainWindow>($"Checking for Xenia {version} updates");
+                    (needsUpdate, _) = await XeniaService.CheckForUpdatesAsync(_releaseService, emulator, releaseType, true);
+                }
+                else
+                {
+                    Logger.Debug<MainWindow>($"Xenia {version} was checked recently, skipping");
+                    continue;
+                }
+
+                if (needsUpdate)
+                {
+                    updatesAvailable.Add(version);
+                    emulator.UpdateAvailable = true;
+                    Logger.Info<MainWindow>($"Xenia {version} update is available");
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error<MainWindow>($"Failed to check for Xenia {version} updates");
+                Logger.LogExceptionDetails<MainWindow>(ex);
+            }
+        }
+
+        Core.Manage.Launcher.XeniaUpdating = false;
+
+        if (updatesAvailable.Count > 0)
+        {
+            string xeniaVersions = string.Join(", ", updatesAvailable);
+            Logger.Info<MainWindow>($"Updates available for: {xeniaVersions}");
+            string message = string.Format(LocalizationHelper.GetText("InfoBar.UpdatesAvailable"), xeniaVersions);
+            _notificationService.Show(message, InfoBarSeverity.Informational);
+        }
+        else
+        {
+            Logger.Debug<MainWindow>("No emulator updates available");
+        }
+
+        await _viewModel.Settings.SaveSettingsAsync();
+        Logger.Debug<MainWindow>("Finished checking for emulator updates");
+    }
+
+    /// <summary>
+    /// Checks for Xenia Manager updates and notifies the user if a newer version is available.
+    /// Respects the configured update check interval (1 day) and uses the experimental/stable
+    /// channel preference from settings.
+    /// </summary>
+    private async Task CheckForManagerUpdates()
+    {
+        Logger.Debug<MainWindow>("Checking for Xenia Manager updates");
+
+        try
+        {
+            // Check if we should skip the update check (already checked today and no update pending)
+            TimeSpan timeSinceLastCheck = DateTime.Now - _settings.Settings.UpdateChecks.LastManagerUpdateCheck;
+            bool alreadyCheckedToday = timeSinceLastCheck < TimeSpan.FromDays(1);
+            bool updateAlreadyFlagged = _settings.Settings.UpdateChecks.ManagerUpdateAvailable;
+
+            if (alreadyCheckedToday && !updateAlreadyFlagged)
+            {
+                Logger.Debug<MainWindow>("Manager update check skipped - checked recently with no update available");
+                return;
+            }
+
+            // Get the current version and check for updates
+            string currentVersion = _settings.GetVersion();
+            bool isExperimental = _settings.Settings.UpdateChecks.UseExperimentalBuild;
+            string channel = isExperimental ? "Experimental" : "Stable";
+
+            Logger.Info<MainWindow>($"Checking for Xenia Manager updates ({channel} channel, current version: {currentVersion})");
+
+            bool updateAvailable = await ManagerService.CheckForUpdates(_releaseService, currentVersion, isExperimental);
+
+            // Update settings with the result
+            _settings.Settings.UpdateChecks.LastManagerUpdateCheck = DateTime.Now;
+            _settings.Settings.UpdateChecks.ManagerUpdateAvailable = updateAvailable;
+            await _settings.SaveSettingsAsync();
+
+            // Notify user if update is available
+            if (updateAvailable)
+            {
+                Logger.Info<MainWindow>($"Xenia Manager update available (current: {currentVersion})");
+                _notificationService.Show(LocalizationHelper.GetText("InfoBar.XeniaManagerUpdateAvailable"), InfoBarSeverity.Informational);
+            }
+            else
+            {
+                Logger.Debug<MainWindow>("Xenia Manager is up to date");
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Error<MainWindow>("Failed to check for Xenia Manager updates");
+            Logger.LogExceptionDetails<MainWindow>(ex);
+        }
+    }
+
+    private void OnWindowDisabled(bool isDisabled)
+    {
+        _viewModel.DisableWindow = isDisabled;
+    }
+
+    private async Task ShowWelcomeDialog()
+    {
+        Logger.Info<MainWindow>("First startup detected, showing welcome dialog");
+
+        ThemeService? themeService = App.Services.GetService<ThemeService>();
+
+        Theme? selectedTheme = await WelcomeDialog.ShowAsync();
+
+        if (selectedTheme.HasValue)
+        {
+            _settings.Settings.Ui.Theme = selectedTheme.Value;
+            themeService?.SetTheme(selectedTheme.Value);
+            Logger.Info<MainWindow>($"Theme set to {selectedTheme.Value} on first startup");
+        }
+
+        _settings.Settings.General.FirstStartup = false;
+        await _settings.SaveSettingsAsync();
+        Logger.Info<MainWindow>("Welcome dialog completed, FirstStartup set to false");
+    }
+}
+

@@ -1,0 +1,97 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Shad360.ViewModels.Pages"
+             xmlns:cards="using:Shad360.Controls.Cards"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="Shad360.Views.Pages.SettingsPage"
+             x:DataType="vm:SettingsPageViewModel">
+    <Design.DataContext>
+        <vm:SettingsPageViewModel />
+    </Design.DataContext>
+    <!-- UI -->
+    <ScrollViewer>
+        <StackPanel Spacing="16" Margin="24">
+            <!-- General Settings -->
+            <Expander>
+                <Expander.Header>
+                    <cards:CardHeader Title="{DynamicResource SettingsPage.General.Title}"
+                                      Description="{DynamicResource SettingsPage.General.Description}"
+                                      Icon="Settings"
+                                      MinHeight="64" />
+                </Expander.Header>
+                <!-- Items -->
+                <StackPanel Spacing="8">
+                    <!-- Parse Game Details with Xenia -->
+                    <cards:ToggleSwitchCard Title="{DynamicResource SettingsPage.General.ParseGameDetailsWithXenia}"
+                                            Description="{DynamicResource SettingsPage.General.ParseGameDetailsWithXenia.Description}"
+                                            ToolTip.Tip="{DynamicResource SettingsPage.General.ParseGameDetailsWithXenia.ToolTip}"
+                                            Icon="Document"
+                                            IsChecked="{Binding ParseGameDetailsWithXenia, Mode=TwoWay}" />
+                    <!-- Use MediaId for Title -->
+                    <cards:ToggleSwitchCard Title="{DynamicResource SettingsPage.General.UseMediaIdForTitle}"
+                                            Description="{DynamicResource SettingsPage.General.UseMediaIdForTitle.Description}"
+                                            ToolTip.Tip="{DynamicResource SettingsPage.General.UseMediaIdForTitle.ToolTip}"
+                                            Icon="Tag"
+                                            IsChecked="{Binding UseMediaIdForTitle, Mode=TwoWay}" />
+                    <!-- Check for Updates on Startup -->
+                    <cards:ToggleSwitchCard Title="{DynamicResource SettingsPage.General.CheckForUpdatesOnStartup}"
+                                            Description="{DynamicResource SettingsPage.General.CheckForUpdatesOnStartup.Description}"
+                                            ToolTip.Tip="{DynamicResource SettingsPage.General.CheckForUpdatesOnStartup.ToolTip}"
+                                            Icon="ArrowClockwise"
+                                            IsChecked="{Binding CheckForUpdatesOnStartup, Mode=TwoWay}" />
+                </StackPanel>
+            </Expander>
+            <!-- UI Settings -->
+            <Expander>
+                <Expander.Header>
+                    <cards:CardHeader Title="{DynamicResource SettingsPage.Ui.Title}"
+                                      Description="{DynamicResource SettingsPage.Ui.Description}"
+                                      Icon="WindowWrench"
+                                      MinHeight="64" />
+                </Expander.Header>
+                <!-- Items -->
+                <StackPanel Spacing="8">
+                    <!-- Language -->
+                    <cards:ComboBoxCard Icon="WindowText"
+                                        Title="{DynamicResource SettingsPage.Ui.Language.Title}"
+                                        Description="{DynamicResource SettingsPage.Ui.Language.Description}"
+                                        ToolTip.Tip="{DynamicResource SettingsPage.Ui.Language.ToolTip}"
+                                        ItemsSource="{Binding AppLanguages}"
+                                        SelectedIndex="{Binding SelectedLanguageIndex}" />
+                    <!-- Theme -->
+                    <cards:ComboBoxCard Icon="WindowBrush"
+                                        Title="{DynamicResource SettingsPage.Ui.Theme.Title}"
+                                        Description="{DynamicResource SettingsPage.Ui.Theme.Description}"
+                                        ItemsSource="{Binding AppThemeOptions}"
+                                        SelectedIndex="{Binding SelectedThemeIndex}" />
+                    <!-- Loading Screen -->
+                    <cards:ToggleSwitchCard Title="{DynamicResource SettingsPage.Ui.LoadingScreen.Title}"
+                                            Description="{DynamicResource SettingsPage.Ui.LoadingScreen.Description}"
+                                            ToolTip.Tip="{DynamicResource SettingsPage.Ui.LoadingScreen.ToolTip}"
+                                            Icon="SlidePlay"
+                                            IsChecked="{Binding LoadingScreen, Mode=TwoWay}" />
+                </StackPanel>
+            </Expander>
+            <!-- Debug Settings -->
+            <Expander>
+                <Expander.Header>
+                    <cards:CardHeader Title="{DynamicResource SettingsPage.Debug.Title}"
+                                      Description="{DynamicResource SettingsPage.Debug.Description}"
+                                      Icon="List"
+                                      MinHeight="64" />
+                </Expander.Header>
+                <!-- Items -->
+                <StackPanel Spacing="8">
+                    <!-- Log Level -->
+                    <cards:ComboBoxCard Icon="WindowText"
+                                        Title="{DynamicResource SettingsPage.Debug.LogLevel.Title}"
+                                        Description="{DynamicResource SettingsPage.Debug.LogLevel.Description}"
+                                        ItemsSource="{Binding LogLevels}"
+                                        SelectedIndex="{Binding SelectedLogLevelIndex}" />
+                </StackPanel>
+            </Expander>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

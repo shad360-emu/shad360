@@ -1,0 +1,309 @@
+name: Build shad360
+
+on:
+  push:
+    branches: [ main, develop ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+    inputs:
+      configuration:
+        description: 'Build configuration'
+        required: true
+        default: 'Release'
+        type: choice
+        options:
+        - Debug
+        - Release
+        - RelWithDebInfo
+
+permissions:
+  contents: read
+  packages: read
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
+
+jobs:
+  # Build native backend
+  build-native:
+    name: Build Native (${{ matrix.config.name }})
+    runs-on: ${{ matrix.config.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+        - { name: 'Windows x64', os: 'windows-latest', arch: 'x64', config: 'Release' }
+        - { name: 'Windows ARM64', os: 'windows-latest', arch: 'ARM64', config: 'Release' }
+        - { name: 'Ubuntu x64', os: 'ubuntu-latest', arch: 'x64', config: 'Release' }
+        - { name: 'Ubuntu ARM64', os: 'ubuntu-latest', arch: 'ARM64', config: 'Release' }
+        - { name: 'macOS x64', os: 'macos-latest', arch: 'x64', config: 'Release' }
+        - { name: 'macOS ARM64', os: 'macos-latest', arch: 'ARM64', config: 'Release' }
+    defaults:
+      run:
+        shell: bash
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+    
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: Setup Ninja
+      uses: seanmiddleditch/gha-setup-ninja@v5
+    
+    - name: Install dependencies (Windows)
+      if: runner.os == 'Windows'
+      run: |
+        choco install cmake --version 3.28.3 -y
+        choco install nasm -y
+        choco install vulkan-sdk -y --version 1.3.283.0
+    
+    - name: Install dependencies (Linux)
+      if: runner.os == 'Linux'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          cmake ninja-build \
+          libvulkan-dev vulkan-tools \
+          libx11-dev libxcb1-dev libxcb-randr0-dev libxcb-xinerama0-dev \
+          libxcursor-dev libxi-dev libxxf86vm-dev libxrandr-dev \
+          libasound2-dev libpulse-dev libjack-jackd2-dev \
+          libdbus-1-dev libudev-dev libwayland-dev \
+          python3 python3-pip \
+          nasm
+    
+    - name: Install dependencies (macOS)
+      if: runner.os == 'macOS'
+      run: |
+        brew install cmake ninja vulkan-headers vulkan-loader vulkan-tools
+        brew install python3 nasm
+        # Install MoltenVK
+        brew install molten-vk
+    
+    - name: Configure CMake
+      run: |
+        cmake -S src/backend -B build/native/${{ matrix.config.name }} \
+          -DCMAKE_BUILD_TYPE=${{ matrix.config.config }} \
+          -DCMAKE_CXX_STANDARD=20 \
+          -DSHAD360_BUILD_SHARED=ON \
+          -DSHAD360_ENABLE_VULKAN=ON \
+          -DSHAD360_ENABLE_D3D12=${{ runner.os == 'Windows' && 'ON' || 'OFF' }} \
+          -DSHAD360_ENABLE_AUDIO=ON \
+          -DSHAD360_ENABLE_DISCORD=OFF \
+          -G Ninja
+    
+    - name: Build
+      run: |
+        cmake --build build/native/${{ matrix.config.name }} --config ${{ matrix.config.config }} --parallel
+    
+    - name: Run tests
+      run: |
+        ctest --test-dir build/native/${{ matrix.config.name }} --output-on-failure --parallel
+      continue-on-error: true
+    
+    - name: Upload native artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: native-${{ matrix.config.name }}
+        path: |
+          build/native/${{ matrix.config.name }}/bin/**/*.dll
+          build/native/${{ matrix.config.name }}/bin/**/*.so
+          build/native/${{ matrix.config.name }}/bin/**/*.dylib
+        retention-days: 7
+
+  # Build frontend
+  build-frontend:
+    name: Build Frontend (${{ matrix.config.name }})
+    runs-on: ${{ matrix.config.os }}
+    needs: build-native
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+        - { name: 'Windows x64', os: 'windows-latest', arch: 'x64', rid: 'win-x64', config: 'Release' }
+        - { name: 'Windows ARM64', os: 'windows-latest', arch: 'ARM64', rid: 'win-arm64', config: 'Release' }
+        - { name: 'Ubuntu x64', os: 'ubuntu-latest', arch: 'x64', rid: 'linux-x64', config: 'Release' }
+        - { name: 'Ubuntu ARM64', os: 'ubuntu-latest', arch: 'ARM64', rid: 'linux-arm64', config: 'Release' }
+        - { name: 'macOS x64', os: 'macos-latest', arch: 'x64', rid: 'osx-x64', config: 'Release' }
+        - { name: 'macOS ARM64', os: 'macos-latest', arch: 'ARM64', rid: 'osx-arm64', config: 'Release' }
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '10.0.x'
+        cache: true
+        cache-dependency-path: |
+          src/frontend/Shad360.Core/Shad360.Core.csproj
+          src/frontend/Shad360.UI/Shad360.UI.csproj
+    
+    - name: Download native artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: native-${{ matrix.config.name }}
+        path: src/frontend/Shad360.UI/bin/${{ matrix.config.config }}/net10.0/runtimes/${{ matrix.config.os == 'windows-latest' && 'win' || matrix.config.os == 'ubuntu-latest' && 'linux' || 'osx' }}-${{ matrix.config.arch == 'x64' && 'x64' || 'arm64' }}/native
+    
+    - name: Restore dependencies
+      run: dotnet restore src/frontend/Shad360.sln
+      working-directory: ${{ github.workspace }}
+    
+    - name: Build frontend
+      run: dotnet build src/frontend/Shad360.sln --configuration ${{ matrix.config.config }} --no-restore
+      working-directory: ${{ github.workspace }}
+    
+    - name: Run tests
+      run: dotnet test src/frontend/Shad360.sln --configuration ${{ matrix.config.config }} --no-build
+      continue-on-error: true
+    
+    - name: Publish frontend
+      run: |
+        dotnet publish src/frontend/Shad360.UI/Shad360.UI.csproj \
+          --configuration ${{ matrix.config.config }} \
+          --runtime ${{ matrix.config.rid }} \
+          --self-contained true \
+          --output ${{ github.workspace }}/artifacts/frontend/${{ matrix.config.name }}
+      working-directory: ${{ github.workspace }}
+    
+    - name: Upload frontend artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: frontend-${{ matrix.config.name }}
+        path: artifacts/frontend/${{ matrix.config.name }}/**
+        retention-days: 7
+
+  # Lint and static analysis
+  lint:
+    name: Lint & Static Analysis
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '10.0.x'
+    
+    - name: Run dotnet format
+      run: dotnet format src/frontend/Shad360.sln --verify-no-changes
+      working-directory: ${{ github.workspace }}
+    
+    - name: Run cppcheck (native)
+      if: always()
+      run: |
+        sudo apt-get update && sudo apt-get install -y cppcheck
+        cppcheck --enable=all --std=c++20 --suppress=missingIncludeSystem --inline-suppr -j$(nproc) src/backend/src/ 2>&1 | head -100
+      continue-on-error: true
+
+  # Security scan
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+    
+    - name: Upload Trivy results to GitHub Security
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: 'trivy-results.sarif'
+
+  # Create release on tag push
+  release:
+    name: Create Release
+    needs: [build-native, build-frontend]
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+    runs-on: windows-latest
+    
+    steps:
+    - name: Download all frontend artifacts
+      uses: actions/download-artifact@v4
+      with:
+        pattern: frontend-*
+        path: artifacts
+        merge-multiple: false
+    
+    - name: Download all native artifacts
+      uses: actions/download-artifact@v4
+      with:
+        pattern: native-*
+        path: artifacts
+        merge-multiple: false
+    
+    - name: Create release packages
+      shell: pwsh
+      run: |
+        $tag = "${{ github.ref_name }}"
+        $version = $tag.TrimStart('v')
+        
+        # Find all frontend artifacts
+        $frontends = Get-ChildItem "artifacts" -Directory | Where-Object { $_.Name -like "frontend-*" }
+        
+        foreach ($frontend in $frontends) {
+          $platform = $frontend.Name.Replace("frontend-", "")
+          $packageDir = "artifacts/shad360-$version-$platform"
+          
+          # Create package directory
+          if (Test-Path $packageDir) { Remove-Item -Recurse -Force $packageDir }
+          New-Item -ItemType Directory -Path $packageDir | Out-Null
+          
+          # Copy frontend
+          Copy-Item "$($frontend.FullName)/*" -Destination $packageDir -Recurse -Force
+          
+          # Copy native library
+          $nativeDir = "artifacts/native-$platform/bin/${{ runner.os == 'Windows' ? 'Windows' : (${{ runner.os }} == 'Linux' ? 'Linux' : 'macOS') }}"
+          if (Test-Path $nativeDir) {
+            Get-ChildItem $nativeDir -Filter "*.dll","*.so","*.dylib" | Copy-Item -Destination $packageDir -Force
+          }
+          
+          # Create archive
+          $archivePath = "artifacts/shad360-$version-$platform.zip"
+          if (Test-Path $archivePath) { Remove-Item $archivePath }
+          Compress-Archive -Path "$packageDir/*" -DestinationPath $archivePath -Force
+          Write-Host "Created $archivePath"
+        }
+    
+    - name: Upload release assets
+      uses: softprops/action-gh-release@v2
+      if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+      with:
+        tag_name: ${{ github.ref_name }}
+        name: shad360 ${{ github.ref_name }}
+        draft: false
+        prerelease: ${{ contains(github.ref_name, '-') }}
+        generate_release_notes: true
+        files: artifacts/shad360-*-windows-x64.zip
+        files: artifacts/shad360-*-linux-x64.zip
+        files: artifacts/shad360-*-macos-x64.zip
+        files: artifacts/shad360-*-macos-arm64.zip
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Upload artifacts for manual download
+      uses: actions/upload-artifact@v4
+      with:
+        name: release-packages
+        path: artifacts/shad360-*.zip
+        retention-days: 30

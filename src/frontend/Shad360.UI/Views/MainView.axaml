@@ -1,0 +1,78 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:controls="using:FluentAvalonia.UI.Controls"
+             xmlns:ic="using:FluentIcons.Avalonia.Fluent"
+             xmlns:vm="using:Shad360.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="Shad360.Views.MainView"
+             x:DataType="vm:MainViewModel">
+    <Design.DataContext>
+        <vm:MainViewModel />
+    </Design.DataContext>
+
+    <controls:NavigationView x:Name="NavigationView"
+                             AlwaysShowHeader="False"
+                             IsBackButtonVisible="False"
+                             IsSettingsVisible="False"
+                             PaneDisplayMode="Left"
+                             IsPaneOpen="False"
+                             IsPaneToggleButtonVisible="True"
+                              ItemInvoked="NavigationView_OnItemInvoked">
+        <!-- Navigation Items -->
+        <controls:NavigationView.MenuItems>
+            <!-- Launch shad360 -->
+            <controls:NavigationViewItem Content="{DynamicResource MainView.Navigation.LaunchShad360}"
+                                         Tag="Open">
+                <controls:NavigationViewItem.IconSource>
+                    <ic:SymbolIconSource Symbol="Play" />
+                </controls:NavigationViewItem.IconSource>
+            </controls:NavigationViewItem>
+
+            <!-- Game Library -->
+            <controls:NavigationViewItem Content="{DynamicResource MainView.Navigation.Library}"
+                                         Tag="Library">
+                <controls:NavigationViewItem.IconSource>
+                    <ic:SymbolIconSource Symbol="Archive" />
+                </controls:NavigationViewItem.IconSource>
+            </controls:NavigationViewItem>
+
+            <!-- shad360 Settings -->
+            <controls:NavigationViewItem Content="{DynamicResource MainView.Navigation.Shad360Settings}"
+                                         Tag="Shad360Settings">
+                <controls:NavigationViewItem.IconSource>
+                    <ic:SymbolIconSource Symbol="PlaySettings" />
+                </controls:NavigationViewItem.IconSource>
+            </controls:NavigationViewItem>
+
+            <!-- Manage Page -->
+            <controls:NavigationViewItem Content="{DynamicResource MainView.Navigation.ManagePage}"
+                                         Tag="Manage">
+                <controls:NavigationViewItem.IconSource>
+                    <ic:SymbolIconSource Symbol="AppsAddIn" />
+                </controls:NavigationViewItem.IconSource>
+            </controls:NavigationViewItem>
+        </controls:NavigationView.MenuItems>
+
+        <controls:NavigationView.FooterMenuItems>
+            <!-- shad360 Settings -->
+            <controls:NavigationViewItem Content="{DynamicResource MainView.Navigation.Settings}"
+                                         Tag="Settings">
+                <controls:NavigationViewItem.IconSource>
+                    <ic:SymbolIconSource Symbol="Settings" />
+                </controls:NavigationViewItem.IconSource>
+            </controls:NavigationViewItem>
+
+            <!-- About -->
+            <controls:NavigationViewItem Content="{DynamicResource MainView.Navigation.About}"
+                                         Tag="About">
+                <controls:NavigationViewItem.IconSource>
+                    <ic:SymbolIconSource Symbol="Info" />
+                </controls:NavigationViewItem.IconSource>
+            </controls:NavigationViewItem>
+        </controls:NavigationView.FooterMenuItems>
+
+        <controls:Frame x:Name="ContentFrame" CacheSize="0" />
+    </controls:NavigationView>
+</UserControl>

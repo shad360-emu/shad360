@@ -1,0 +1,123 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Shad360.ViewModels.Controls"
+             xmlns:fluent="using:FluentIcons.Avalonia.Fluent"
+             xmlns:ic="using:FluentIcons.Avalonia.Fluent"
+             xmlns:cards="using:Shad360.Controls.Cards"
+             mc:Ignorable="d" d:DesignWidth="500" d:DesignHeight="400"
+             x:Class="Shad360.Controls.ManageProfilesDialog"
+             x:DataType="vm:ManageProfilesDialogViewModel"
+             Width="500">
+    <Grid RowDefinitions="Auto,*,Auto">
+        <!-- Profile Selection ComboBox -->
+        <StackPanel Grid.Row="0" Spacing="8">
+            <Grid ColumnDefinitions="*,Auto">
+                <ComboBox Grid.Column="0"
+                          ItemsSource="{Binding Gamertags}"
+                          SelectedItem="{Binding SelectedGamertag, Mode=TwoWay}"
+                          HorizontalAlignment="Stretch" />
+                <StackPanel Grid.Column="1"
+                            Orientation="Horizontal"
+                            Spacing="4"
+                            Margin="8,0,0,0">
+                    <Button Command="{Binding CreateAccountCommand}"
+                            ToolTip.Tip="{DynamicResource ManageProfilesDialog.CreateAccount.Button.ToolTip}">
+                        <Button.Content>
+                            <ic:SymbolIcon Symbol="Add" />
+                        </Button.Content>
+                    </Button>
+                    <Button Command="{Binding DeleteAccountCommand}"
+                            ToolTip.Tip="{DynamicResource ManageProfilesDialog.DeleteAccount.Button.ToolTip}"
+                            IsEnabled="{Binding SelectedGamertag, Converter={StaticResource NotNullConverter}}">
+                        <Button.Content>
+                            <ic:SymbolIcon Symbol="Delete" />
+                        </Button.Content>
+                    </Button>
+                    <Button Command="{Binding ExportProfileCommand}"
+                            ToolTip.Tip="{DynamicResource ManageProfilesDialog.ExportProfile.Button.ToolTip}"
+                            IsEnabled="{Binding SelectedGamertag, Converter={StaticResource NotNullConverter}}">
+                        <Button.Content>
+                            <ic:SymbolIcon Symbol="ArrowExport" />
+                        </Button.Content>
+                    </Button>
+                    <Button Command="{Binding ImportProfileCommand}"
+                            ToolTip.Tip="{DynamicResource ManageProfilesDialog.ImportProfile.Button.ToolTip}">
+                        <Button.Content>
+                            <ic:SymbolIcon Symbol="ArrowImport" />
+                        </Button.Content>
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </StackPanel>
+
+        <!-- Profile Edit Section -->
+        <cards:CustomCard Grid.Row="1"
+                          Margin="0,16,0,0"
+                          HorizontalAlignment="Stretch">
+            <StackPanel Spacing="8"
+                        HorizontalAlignment="Stretch">
+                <!-- Gamertag Edit -->
+                <cards:TextBoxCard Title="{DynamicResource ManageProfilesDialog.Edit.Gamertag.Label}"
+                                   Text="{Binding EditGamertag, Mode=TwoWay}"
+                                   Icon="Edit"
+                                   ShowIconBackground="True"
+                                   HorizontalAlignment="Stretch"
+                                   ToolTip.Tip="{Binding GamertagErrorMessage}" />
+
+                <!-- Country Edit -->
+                <cards:ComboBoxCard Title="{DynamicResource ManageProfilesDialog.Edit.Country.Label}"
+                                    ItemsSource="{Binding Countries}"
+                                    SelectedIndex="{Binding SelectedCountryIndex, Mode=TwoWay}"
+                                    Icon="Globe"
+                                    ShowIconBackground="True"
+                                    ComboBoxMinWidth="180"
+                                    HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Left" />
+
+                <!-- Language Edit -->
+                <cards:ComboBoxCard Title="{DynamicResource ManageProfilesDialog.Edit.Language.Label}"
+                                    ItemsSource="{Binding Languages}"
+                                    SelectedIndex="{Binding SelectedLanguageIndex, Mode=TwoWay}"
+                                    Icon="Translate"
+                                    ShowIconBackground="True"
+                                    ComboBoxMinWidth="180"
+                                    HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Left" />
+
+                <!-- Xbox Live Enabled -->
+                <cards:ToggleSwitchCard Title="{DynamicResource ManageProfilesDialog.Edit.LiveEnabled.Title}"
+                                        Description="{DynamicResource ManageProfilesDialog.Edit.LiveEnabled.Description}"
+                                        IsChecked="{Binding IsLiveEnabled, Mode=TwoWay}"
+                                        Icon="GlobeStar"
+                                        ShowIconBackground="True"
+                                        HorizontalAlignment="Stretch" />
+
+                <!-- Subscription Tier -->
+                <cards:ComboBoxCard Title="{DynamicResource ManageProfilesDialog.Edit.SubscriptionTier.Title}"
+                                    Description="{DynamicResource ManageProfilesDialog.Edit.SubscriptionTier.Description}"
+                                    ItemsSource="{Binding SubscriptionTiers}"
+                                    SelectedIndex="{Binding SelectedSubscriptionTierIndex, Mode=TwoWay}"
+                                    Icon="Star"
+                                    ShowIconBackground="True"
+                                    ComboBoxMinWidth="180"
+                                    IsEnabled="{Binding IsLiveEnabled}"
+                                    HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Left" />
+            </StackPanel>
+        </cards:CustomCard>
+
+        <!-- Action Buttons -->
+        <StackPanel Grid.Row="2"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Right"
+                    Spacing="8"
+                    Margin="0,16,0,0">
+            <Button Content="{DynamicResource ManageProfilesDialog.Save.Button}"
+                    Command="{Binding SaveCommand}"
+                    IsEnabled="{Binding CanSave}"
+                    MinWidth="100" />
+        </StackPanel>
+    </Grid>
+</UserControl>

@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <SelfContained>false</SelfContained>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <AssemblyVersion>0.1.0</AssemblyVersion>
+    <ApplicationIcon>Assets\icon.ico</ApplicationIcon>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <PublishSingleFile>true</PublishSingleFile>
+    <PublishTrimmed>false</PublishTrimmed>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <AvaloniaResource Include="Assets\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Shad360.Core\Shad360.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="Controls\ConfigEditorControl.axaml.cs">
+      <DependentUpon>ConfigEditorControl.axaml</DependentUpon>
+    </Compile>
+    <Compile Update="Controls\WelcomeDialog.axaml.cs">
+      <DependentUpon>WelcomeDialog.axaml</DependentUpon>
+    </Compile>
+    <Compile Update="Controls\EditXConfigDialog.axaml.cs">
+      <DependentUpon>EditXConfigDialog.axaml</DependentUpon>
+    </Compile>
+  </ItemGroup>
+
+  <!-- Native library references - copied to output directory -->
+  <ItemGroup Condition="'$(Configuration)'=='Debug'">
+    <None Include="..\..\build\Debug\shad360.dll" Link="shad360.dll" CopyToOutputDirectory="PreserveNewest" Condition="Exists('..\..\build\Debug\shad360.dll')" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(Configuration)'=='Release'">
+    <None Include="..\..\build\Release\shad360.dll" Link="shad360.dll" CopyToOutputDirectory="PreserveNewest" Condition="Exists('..\..\build\Release\shad360.dll')" />
+  </ItemGroup>
+
+  <!-- Native library dependencies -->
+  <ItemGroup>
+    <None Include="..\..\build\**\*.dll" Link="%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" Condition="Exists('..\..\build')" />
+  </ItemGroup>
+
+</Project>

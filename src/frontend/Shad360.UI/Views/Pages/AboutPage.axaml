@@ -1,0 +1,402 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Shad360.ViewModels.Pages"
+             xmlns:cards="using:Shad360.Controls.Cards"
+             xmlns:icons="using:FluentIcons.Avalonia.Fluent"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="Shad360.Views.Pages.AboutPage"
+             x:DataType="vm:AboutPageViewModel">
+    <Design.DataContext>
+        <vm:AboutPageViewModel />
+    </Design.DataContext>
+
+    <Grid RowDefinitions="Auto,*">
+        <!-- Download Progress Card -->
+        <cards:DownloadProgressCard Grid.Row="0"
+                                    IsOpen="{Binding IsDownloading}"
+                                    StatusText="{Binding DownloadProgressStatus}"
+                                    Progress="{Binding DownloadProgress}"
+                                    ShowIconBackground="True" />
+
+        <ScrollViewer Grid.Row="1" VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
+            <StackPanel Spacing="16" Margin="24">
+                <!-- Application Info Card -->
+                <cards:CustomCard>
+                    <StackPanel Spacing="16">
+                        <!-- App Icon and Title -->
+                        <Grid ColumnDefinitions="Auto,*">
+                            <!-- App Icon with Accent Background -->
+                            <Border Grid.Column="0"
+                                    Width="64" Height="64"
+                                    Margin="0,0,20,0"
+                                    Background="{DynamicResource SystemAccentColorBrush}"
+                                    CornerRadius="16">
+                                <Image Width="48" Height="48"
+                                       Source="/Assets/icon.ico"
+                                       Stretch="Uniform" />
+                            </Border>
+
+                            <!-- Title and Version -->
+                            <StackPanel Grid.Column="1"
+                                        VerticalAlignment="Center">
+                                <TextBlock FontSize="28"
+                                           FontWeight="SemiBold"
+                                           Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                           Text="{DynamicResource App.Title}" />
+                                <TextBlock Margin="0,4,0,0"
+                                           FontSize="16"
+                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                           Text="{Binding ApplicationVersion}" />
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- App Description -->
+                        <Border Padding="20"
+                                Background="{DynamicResource CardBackgroundFillColorSecondaryBrush}"
+                                BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+                                BorderThickness="1"
+                                CornerRadius="8">
+                            <TextBlock FontSize="14"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                       Text="{DynamicResource AboutPage.App.Description}"
+                                       TextAlignment="Center"
+                                       TextWrapping="Wrap" />
+                        </Border>
+
+                        <!-- Experimental Build Toggle -->
+                        <cards:ToggleSwitchCard Title="{DynamicResource AboutPage.UseExperimentalBuild.Title}"
+                                                Description="{DynamicResource AboutPage.UseExperimentalBuild.Description}"
+                                                Icon="Beaker"
+                                                IsChecked="{Binding UseExperimentalBuilds, Mode=TwoWay}"
+                                                ShowIconBackground="True" />
+
+                        <!-- Action Buttons -->
+                        <StackPanel Spacing="12">
+                            <!-- Bottom Row Buttons -->
+                            <Grid ColumnDefinitions="*,*,*">
+                                <!-- Website Button -->
+                                <Button Grid.Column="0"
+                                        HorizontalAlignment="Stretch"
+                                        HorizontalContentAlignment="Center"
+                                        Cursor="Hand"
+                                        Command="{Binding OpenWebsiteCommand}"
+                                        ToolTip.Tip="{DynamicResource AboutPage.WebsiteButton.ToolTip}">
+                                    <Button.Content>
+                                        <StackPanel Orientation="Horizontal" Spacing="12">
+                                            <icons:SymbolIcon Symbol="Globe" />
+                                            <TextBlock Text="{DynamicResource AboutPage.WebsiteButton.Text}" />
+                                        </StackPanel>
+                                    </Button.Content>
+                                </Button>
+
+                                <!-- GitHub Button -->
+                                <Button Grid.Column="1"
+                                        HorizontalAlignment="Stretch"
+                                        HorizontalContentAlignment="Center"
+                                        Cursor="Hand"
+                                        Command="{Binding OpenGitHubCommand}"
+                                        ToolTip.Tip="{DynamicResource AboutPage.GithubButton.ToolTip}">
+                                    <Button.Content>
+                                        <StackPanel Orientation="Horizontal" Spacing="12">
+                                            <icons:SymbolIcon Symbol="Open" />
+                                            <TextBlock Text="{DynamicResource AboutPage.GithubButton.Text}" />
+                                        </StackPanel>
+                                    </Button.Content>
+                                </Button>
+
+                                <!-- Check Updates Button -->
+                                <Button Grid.Column="2"
+                                        HorizontalAlignment="Stretch"
+                                        HorizontalContentAlignment="Center"
+                                        Cursor="Hand"
+                                        Command="{Binding CheckForUpdatesCommand}"
+                                        IsVisible="{Binding CheckForUpdatesButtonVisible}">
+                                    <Button.Content>
+                                        <StackPanel Orientation="Horizontal" Spacing="12">
+                                            <icons:SymbolIcon Symbol="ArrowSync" />
+                                            <TextBlock Text="{DynamicResource AboutPage.CheckForUpdatesButton.Text}" />
+                                        </StackPanel>
+                                    </Button.Content>
+                                </Button>
+
+                                <!-- Update Button -->
+                                <Button Grid.Column="2"
+                                        Background="{DynamicResource SystemAccentColorBrush}"
+                                        HorizontalAlignment="Stretch"
+                                        HorizontalContentAlignment="Center"
+                                        Cursor="Hand"
+                                        Command="{Binding UpdateXeniaManagerCommand}"
+                                        IsVisible="{Binding UpdateManagerButtonVisible}">
+                                    <Button.Content>
+                                        <StackPanel Orientation="Horizontal" Spacing="12">
+                                            <icons:SymbolIcon Symbol="ArrowDownload" />
+                                            <TextBlock Text="{DynamicResource AboutPage.UpdateXeniaManagerButton.Text}" />
+                                        </StackPanel>
+                                    </Button.Content>
+                                </Button>
+                            </Grid>
+                        </StackPanel>
+                    </StackPanel>
+                </cards:CustomCard>
+
+                <!-- License & Credits Card -->
+                <cards:CustomCard>
+                    <StackPanel Spacing="16">
+                        <!-- Header -->
+                        <Grid ColumnDefinitions="Auto,*">
+                            <icons:SymbolIcon Grid.Column="0"
+                                              Margin="0,0,12,0"
+                                              VerticalAlignment="Center"
+                                              Symbol="Document" />
+                            <StackPanel Grid.Column="1"
+                                        VerticalAlignment="Center">
+                                <TextBlock FontSize="18"
+                                           FontWeight="SemiBold"
+                                           Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                           Text="{DynamicResource AboutPage.LicenseCredits.Text}" />
+                                <TextBlock FontSize="12"
+                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                           Text="{DynamicResource AboutPage.LicenseCredits.SideText}" />
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- Content -->
+                        <StackPanel Spacing="16">
+                            <!-- License Text -->
+                            <TextBlock FontSize="14"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                       Text="{DynamicResource AboutPage.License.Text}" />
+
+                            <!-- Xbox 360 Emulation Section -->
+                            <StackPanel Spacing="8">
+                                <TextBlock FontSize="15"
+                                           FontWeight="SemiBold"
+                                           Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                           Text="{DynamicResource AboutPage.Xbox360Emulation.Header}" />
+
+                                <Border Padding="12"
+                                        Background="{DynamicResource CardBackgroundFillColorSecondaryBrush}"
+                                        CornerRadius="4">
+                                    <StackPanel Spacing="4">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}">
+                                                <Run Text="â€¢ " />
+                                            </TextBlock>
+                                            <Button Padding="0"
+                                                    Background="Transparent"
+                                                    BorderThickness="0"
+                                                    Command="{Binding OpenUrlCommand}"
+                                                    CommandParameter="https://github.com/xenia-project/xenia"
+                                                    Cursor="Hand"
+                                                    Foreground="{DynamicResource SystemAccentColorLight2Brush}"
+                                                    HorizontalAlignment="Left">
+                                                <TextBlock Text="{DynamicResource AboutPage.Credits.XeniaProject.Title}" />
+                                            </Button>
+                                            <TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                       Text="{DynamicResource AboutPage.Credits.XeniaProject.ToolTip}" />
+                                        </StackPanel>
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}">
+                                                <Run Text="â€¢ " />
+                                            </TextBlock>
+                                            <Button Padding="0"
+                                                    Background="Transparent"
+                                                    BorderThickness="0"
+                                                    Command="{Binding OpenUrlCommand}"
+                                                    CommandParameter="https://github.com/xenia-canary/xenia-canary"
+                                                    Cursor="Hand"
+                                                    Foreground="{DynamicResource SystemAccentColorLight2Brush}"
+                                                    HorizontalAlignment="Left">
+                                                <TextBlock Text="{DynamicResource AboutPage.Credits.XeniaCanary.Title}" />
+                                            </Button>
+                                            <TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                       Text="{DynamicResource AboutPage.Credits.XeniaCanary.ToolTip}" />
+                                        </StackPanel>
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}">
+                                                <Run Text="â€¢ " />
+                                            </TextBlock>
+                                            <Button Padding="0"
+                                                    Background="Transparent"
+                                                    BorderThickness="0"
+                                                    Command="{Binding OpenUrlCommand}"
+                                                    CommandParameter="https://github.com/AdrianCassar/xenia-canary"
+                                                    Cursor="Hand"
+                                                    Foreground="{DynamicResource SystemAccentColorLight2Brush}"
+                                                    HorizontalAlignment="Left">
+                                                <TextBlock Text="{DynamicResource AboutPage.Credits.XeniaNetplay.Title}" />
+                                            </Button>
+                                            <TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                       Text="{DynamicResource AboutPage.Credits.XeniaNetplay.ToolTip}" />
+                                        </StackPanel>
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}">
+                                                <Run Text="â€¢ " />
+                                            </TextBlock>
+                                            <Button Padding="0"
+                                                    Background="Transparent"
+                                                    BorderThickness="0"
+                                                    Command="{Binding OpenUrlCommand}"
+                                                    CommandParameter="https://github.com/marinesciencedude/xenia-canary-mousehook"
+                                                    Cursor="Hand"
+                                                    Foreground="{DynamicResource SystemAccentColorLight2Brush}"
+                                                    HorizontalAlignment="Left">
+                                                <TextBlock Text="{DynamicResource AboutPage.Credits.XeniaMousehook.Title}" />
+                                            </Button>
+                                            <TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                       Text="{DynamicResource AboutPage.Credits.XeniaMousehook.ToolTip}" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+
+                            <!-- Libraries Section -->
+                            <StackPanel Spacing="8">
+                                <TextBlock FontSize="15"
+                                           FontWeight="SemiBold"
+                                           Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                           Text="{DynamicResource AboutPage.Libraries.Header}" />
+
+                                <Border Padding="12"
+                                        Background="{DynamicResource CardBackgroundFillColorSecondaryBrush}"
+                                        CornerRadius="4">
+                                    <StackPanel Spacing="4">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}">
+                                                <Run Text="â€¢ " />
+                                            </TextBlock>
+                                            <Button Padding="0"
+                                                    Background="Transparent"
+                                                    BorderThickness="0"
+                                                    Command="{Binding OpenUrlCommand}"
+                                                    CommandParameter="https://avaloniaui.net/"
+                                                    Cursor="Hand"
+                                                    Foreground="{DynamicResource SystemAccentColorLight2Brush}"
+                                                    HorizontalAlignment="Left">
+                                                <TextBlock Text="{DynamicResource AboutPage.Credits.AvaloniaUi.Title}" />
+                                            </Button>
+                                            <TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                       Text="{DynamicResource AboutPage.Credits.AvaloniaUi.ToolTip}" />
+                                        </StackPanel>
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}">
+                                                <Run Text="â€¢ " />
+                                            </TextBlock>
+                                            <Button Padding="0"
+                                                    Background="Transparent"
+                                                    BorderThickness="0"
+                                                    Command="{Binding OpenUrlCommand}"
+                                                    CommandParameter="https://github.com/amwx/FluentAvalonia/"
+                                                    Cursor="Hand"
+                                                    Foreground="{DynamicResource SystemAccentColorLight2Brush}"
+                                                    HorizontalAlignment="Left">
+                                                <TextBlock Text="{DynamicResource AboutPage.Credits.FluentAvalonia.Title}" />
+                                            </Button>
+                                            <TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                       Text="{DynamicResource AboutPage.Credits.FluentAvalonia.ToolTip}" />
+                                        </StackPanel>
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}">
+                                                <Run Text="â€¢ " />
+                                            </TextBlock>
+                                            <Button Padding="0"
+                                                    Background="Transparent"
+                                                    BorderThickness="0"
+                                                    Command="{Binding OpenUrlCommand}"
+                                                    CommandParameter="https://github.com/davidxuang/FluentIcons"
+                                                    Cursor="Hand"
+                                                    Foreground="{DynamicResource SystemAccentColorLight2Brush}"
+                                                    HorizontalAlignment="Left">
+                                                <TextBlock Text="{DynamicResource AboutPage.Credits.FluentIcons.Title}" />
+                                            </Button>
+                                            <TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                       Text="{DynamicResource AboutPage.Credits.FluentIcons.ToolTip}" />
+                                        </StackPanel>
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}">
+                                                <Run Text="â€¢ " />
+                                            </TextBlock>
+                                            <Button Padding="0"
+                                                    Background="Transparent"
+                                                    BorderThickness="0"
+                                                    Command="{Binding OpenUrlCommand}"
+                                                    CommandParameter="https://github.com/NLog/NLog"
+                                                    Cursor="Hand"
+                                                    Foreground="{DynamicResource SystemAccentColorLight2Brush}"
+                                                    HorizontalAlignment="Left">
+                                                <TextBlock Text="{DynamicResource AboutPage.Credits.NLog.Title}" />
+                                            </Button>
+                                            <TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                       Text="{DynamicResource AboutPage.Credits.NLog.ToolTip}" />
+                                        </StackPanel>
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}">
+                                                <Run Text="â€¢ " />
+                                            </TextBlock>
+                                            <Button Padding="0"
+                                                    Background="Transparent"
+                                                    BorderThickness="0"
+                                                    Command="{Binding OpenUrlCommand}"
+                                                    CommandParameter="https://github.com/Team-Resurgent/Xbox360Toolkit"
+                                                    Cursor="Hand"
+                                                    Foreground="{DynamicResource SystemAccentColorLight2Brush}"
+                                                    HorizontalAlignment="Left">
+                                                <TextBlock Text="{DynamicResource AboutPage.Credits.Xbox360Toolkit.Title}" />
+                                            </Button>
+                                            <TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                       Text="{DynamicResource AboutPage.Credits.Xbox360Toolkit.ToolTip}" />
+                                        </StackPanel>
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}">
+                                                <Run Text="â€¢ " />
+                                            </TextBlock>
+                                            <Button Padding="0"
+                                                    Background="Transparent"
+                                                    BorderThickness="0"
+                                                    Command="{Binding OpenUrlCommand}"
+                                                    CommandParameter="https://github.com/adamhathcock/sharpcompress"
+                                                    Cursor="Hand"
+                                                    Foreground="{DynamicResource SystemAccentColorLight2Brush}"
+                                                    HorizontalAlignment="Left">
+                                                <TextBlock Text="{DynamicResource AboutPage.Credits.SharpCompress.Title}" />
+                                            </Button>
+                                            <TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                       Text="{DynamicResource AboutPage.Credits.SharpCompress.ToolTip}" />
+                                        </StackPanel>
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}">
+                                                <Run Text="â€¢ " />
+                                            </TextBlock>
+                                            <Button Padding="0"
+                                                    Background="Transparent"
+                                                    BorderThickness="0"
+                                                    Command="{Binding OpenUrlCommand}"
+                                                    CommandParameter="https://github.com/oleg-st/ZstdSharp"
+                                                    Cursor="Hand"
+                                                    Foreground="{DynamicResource SystemAccentColorLight2Brush}"
+                                                    HorizontalAlignment="Left">
+                                                <TextBlock Text="{DynamicResource AboutPage.Credits.ZstdSharp.Title}" />
+                                            </Button>
+                                            <TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                       Text="{DynamicResource AboutPage.Credits.ZstdSharp.ToolTip}" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+
+                            <!-- Footer Note -->
+                            <TextBlock FontSize="12"
+                                       FontStyle="Italic"
+                                       Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                       Text="{DynamicResource AboutPage.FooterNote.Text}"
+                                       TextAlignment="Center"
+                                       TextWrapping="Wrap" />
+                        </StackPanel>
+                    </StackPanel>
+                </cards:CustomCard>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

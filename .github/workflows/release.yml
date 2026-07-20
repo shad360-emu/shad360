@@ -63,7 +63,7 @@ jobs:
       # Step 4: Publish the GitHub Release with auto-generated notes and upload the archive.
       # We use `softprops/action-gh-release` which handles the creation and asset upload gracefully.
       - name: Publish GitHub Release
-        uses: softprops/action-gh-release@v2.0.4
+        uses: softprops/action-gh-release@v3.0.2
         with:
           tag_name: ${{ github.ref_name }}
           name: ${{ github.ref_name }}

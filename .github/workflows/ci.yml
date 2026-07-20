@@ -86,7 +86,7 @@ jobs:
 
       # Step 4: Install CMake and Ninja build systems
       - name: Setup CMake and Ninja
-        uses: lukka/get-cmake@v3.28.3
+        uses: lukka/get-cmake@v4.4.0
         with:
           cmakeVersion: ${{ env.CMAKE_VERSION }}
           ninjaVersion: ${{ env.NINJA_VERSION }}
